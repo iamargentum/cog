@@ -7,7 +7,7 @@ import responses
 from PIL import Image
 from responses import matchers
 
-from .conftest import uses_predictor, uses_predictor_with_client_options
+from .conftest import uses_predictor, uses_predictor_with_client_options, uses_trainer
 
 
 @uses_predictor("setup")
@@ -313,6 +313,47 @@ def test_openapi_specification_with_int_choices(client, static_schema):
         "enum": [1, 2],
         "title": "pick_a_number_any_number",
         "type": "integer",
+    }
+
+
+@uses_trainer("train.py:train")
+def test_train_openapi_specification(client):
+    resp = client.get("/openapi.json")
+    assert resp.status_code == 200
+
+    schema = resp.json()
+    assert schema["openapi"] == "3.0.2"
+    assert schema["info"] == {"title": "Cog", "version": "0.1.0"}
+
+    assert schema["components"]["schemas"]["TrainingInput"] == {
+        "title": "TrainingInput",
+        "type": "object",
+        "properties": {
+            "n": {
+                "type": "integer",
+                "x-order": 0,
+                "title": "N",
+                "description": "Dimension of weights to generate",
+            },
+        },
+        "required": [
+            "n",
+        ],
+    }
+
+    assert schema["components"]["schemas"]["TrainingOutput"] == {
+        "title": "TrainingOutput",
+        "type": "object",
+        "properties": {
+            "weights": {
+                "type": "string",
+                "format": "uri",
+                "title": "Weights",
+            },
+        },
+        "required": [
+            "weights",
+        ],
     }
 
 
